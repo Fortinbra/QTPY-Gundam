@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(QTPY-Gundam QTPY-Gundam.cpp )
+add_executable(QTPY-Gundam src/QTPY-Gundam.cpp )
 
 pico_set_program_name(QTPY-Gundam "QTPY-Gundam")
 pico_set_program_version(QTPY-Gundam "0.1")
