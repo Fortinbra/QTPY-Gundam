@@ -35,7 +35,13 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(QTPY-Gundam src/QTPY-Gundam.cpp )
+add_executable(QTPY-Gundam 
+    src/main.cpp
+    src/neopixel.cpp
+)
+
+# Generate PIO header
+pico_generate_pio_header(QTPY-Gundam ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
 
 pico_set_program_name(QTPY-Gundam "QTPY-Gundam")
 pico_set_program_version(QTPY-Gundam "0.1")
@@ -46,7 +52,9 @@ pico_enable_stdio_usb(QTPY-Gundam 1)
 
 # Add the standard library to the build
 target_link_libraries(QTPY-Gundam
-        pico_stdlib)
+        pico_stdlib
+        hardware_pio
+)
 
 # Add the standard include files to the build
 target_include_directories(QTPY-Gundam PRIVATE
