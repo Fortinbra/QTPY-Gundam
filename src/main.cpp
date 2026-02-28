@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <math.h>
 #include "pico/stdlib.h"
 #include "neopixel.h"
+#include "animation.h"
 
 // Configuration
 #define NEOPIXEL_PIN 26  // QT Py RP2040 NeoPixel BFF typically uses GPIO 12
@@ -10,31 +10,49 @@
 int main()
 {
     stdio_init_all();
-    
+
     printf("Gundam LED Controller - 4 Pixels\n");
-    
+
     // Initialize NeoPixel driver
     NeoPixel strip(NEOPIXEL_PIN, NUM_PIXELS);
-    
-    // Yellow color for first two LEDs (25% brightness)
-    const uint8_t yellow_r = 64;
-    const uint8_t yellow_g = 50;
-    const uint8_t yellow_b = 0;
-    
-    // Red color for last two LEDs (25% brightness, accounting for GRB format)
-    const uint8_t red_r = 0;
-    const uint8_t red_g = 64;
-    const uint8_t red_b = 0;
-    
-    // Set first two LEDs to yellow
-    strip.setPixelColor(0, yellow_r, yellow_g, yellow_b);
-    strip.setPixelColor(1, yellow_r, yellow_g, yellow_b);
-    
-    // Set last two LEDs to red
-    strip.setPixelColor(2, red_r, red_g, red_b);
-    strip.setPixelColor(3, red_r, red_g, red_b);
-    
+
+    // ── Boot-up animation sequence ──────────────────────────────────
+
+    // Phase 1: Rainbow cycle on all LEDs in unison (~5 s)
+    //          Gives the illusion of a massive computer starting up.
+    RainbowCycleAnimation rainbowCycle(5000, 20, 64);
+
+    // Phase 2: Rainbow chase across all LEDs (~3 s)
+    RainbowChaseAnimation rainbowChase(3000, 30, 64);
+
+    // Phase 3: All LEDs turn red for 5 s
+    SolidColorAnimation solidRed(0, 64, 0, 5000);
+
+    // Phase 4: Flicker effect (~1 s), then LEDs off for 1 s
+    FlickerAnimation flicker(0, 64, 0, 1000, 1000, 80);
+
+    // Phase 5: Stable state – two yellow, two red
+    StaticPatternAnimation::PixelColor stableColors[NUM_PIXELS] = {
+        {64, 50, 0},  // LED 0: Yellow
+        {64, 50, 0},  // LED 1: Yellow
+        {0,  64, 0},  // LED 2: Red
+        {0,  64, 0},  // LED 3: Red
+    };
+    StaticPatternAnimation stablePattern(stableColors, NUM_PIXELS);
+
+    // Assemble and start the sequence
+    AnimationSequencer sequencer;
+    sequencer.addAnimation(&rainbowCycle);
+    sequencer.addAnimation(&rainbowChase);
+    sequencer.addAnimation(&solidRed);
+    sequencer.addAnimation(&flicker);
+    sequencer.addAnimation(&stablePattern);
+
+    sequencer.start(strip);
+
+    // ── Main loop ───────────────────────────────────────────────────
     while (true) {
-        sleep_ms(1000);
+        sequencer.update(strip);
+        sleep_ms(1);
     }
 }

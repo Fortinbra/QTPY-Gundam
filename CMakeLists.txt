@@ -38,6 +38,7 @@ pico_sdk_init()
 add_executable(QTPY-Gundam 
     src/main.cpp
     src/neopixel.cpp
+    src/animation.cpp
 )
 
 # Generate PIO header
