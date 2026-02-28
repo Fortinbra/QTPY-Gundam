@@ -149,6 +149,12 @@ public:
     // True when every animation in the sequence has completed
     bool isComplete() const;
 
+    // Index of the currently-running animation
+    uint getCurrentIndex() const { return current_; }
+
+    // Total number of animations in the sequence
+    uint getCount() const { return count_; }
+
 private:
     Animation *animations_[MAX_ANIMATIONS];
     uint count_;
