@@ -52,9 +52,10 @@ int main()
     sequencer.start(strip);
 
     // ── Random green-eyes configuration ─────────────────────────────
-    //  Neon green (Gundam sensor / camera green, ~#1AE605)
-    const uint8_t NEON_GREEN_R = 15;
-    const uint8_t NEON_GREEN_G = 200;
+    //  Neon green (Gundam sensor / camera green)
+    //  NOTE: R/G are swapped on this hardware (RGB wire order, not GRB)
+    const uint8_t NEON_GREEN_R = 200;
+    const uint8_t NEON_GREEN_G = 15;
     const uint8_t NEON_GREEN_B = 5;
     const uint32_t GREEN_EYES_DURATION_MS = 10000;  // 10 s
 
