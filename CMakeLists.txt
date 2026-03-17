@@ -39,10 +39,14 @@ add_executable(QTPY-Gundam
     src/main.cpp
     src/neopixel.cpp
     src/animation.cpp
+    src/i2s_audio.cpp
+    src/audio/clip_03.cpp
+    src/audio/clip_05.cpp
 )
 
-# Generate PIO header
+# Generate PIO headers
 pico_generate_pio_header(QTPY-Gundam ${CMAKE_CURRENT_LIST_DIR}/src/ws2812.pio)
+pico_generate_pio_header(QTPY-Gundam ${CMAKE_CURRENT_LIST_DIR}/src/i2s_out.pio)
 
 pico_set_program_name(QTPY-Gundam "QTPY-Gundam")
 pico_set_program_version(QTPY-Gundam "0.1")
@@ -55,11 +59,13 @@ pico_enable_stdio_usb(QTPY-Gundam 1)
 target_link_libraries(QTPY-Gundam
         pico_stdlib
         hardware_pio
+        hardware_dma
 )
 
 # Add the standard include files to the build
 target_include_directories(QTPY-Gundam PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src
+        ${CMAKE_CURRENT_LIST_DIR}/src/audio
 )
 
 pico_add_extra_outputs(QTPY-Gundam)

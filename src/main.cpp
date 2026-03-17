@@ -3,10 +3,18 @@
 #include "pico/stdlib.h"
 #include "neopixel.h"
 #include "animation.h"
+#include "i2s_audio.h"
+#include "clip_03.h"
+#include "clip_05.h"
 
 // Configuration
 #define NEOPIXEL_PIN 26  // QT Py RP2040 NeoPixel BFF typically uses GPIO 12
 #define NUM_PIXELS 4
+
+// I2S Amplifier BFF pin assignments
+#define I2S_DATA_PIN  29  // A0 — DIN
+#define I2S_BCLK_PIN  27  // A2 — BCLK
+#define I2S_LRCLK_PIN 28  // A1 — LRCLK
 
 int main()
 {
@@ -16,6 +24,9 @@ int main()
 
     // Initialize NeoPixel driver
     NeoPixel strip(NEOPIXEL_PIN, NUM_PIXELS);
+
+    // Initialize I2S audio driver
+    I2SAudio audio(I2S_DATA_PIN, I2S_BCLK_PIN, I2S_LRCLK_PIN);
 
     // ── Boot-up animation sequence ──────────────────────────────────
 
@@ -64,6 +75,7 @@ int main()
 
     bool   greenEyesActive    = false;
     uint32_t greenEyesStart   = 0;
+    bool   audioPlayed        = false;  // Track if clip_05 has been triggered
     // First possible trigger 20-60 s after boot
     uint32_t nextGreenEyesTime = to_ms_since_boot(get_absolute_time())
                                  + 20000 + (rand() % 40000);
@@ -88,10 +100,22 @@ int main()
             // Only trigger once boot-up is finished (stable pattern running)
             bool inStableState = sequencer.getCurrentIndex()
                                  >= sequencer.getCount() - 1;
+
+            // Play clip_05 once when entering steady state
+            if (inStableState && !audioPlayed) {
+                audio.play(CLIP_05_SAMPLES, CLIP_05_NUM_SAMPLES, CLIP_05_SAMPLE_RATE);
+                audioPlayed = true;
+            }
+
             if (inStableState && now >= nextGreenEyesTime) {
                 greenEyesActive = true;
                 greenEyesStart  = now;
-                strip.fill(NEON_GREEN_R, NEON_GREEN_G, NEON_GREEN_B);
+                // Eyes (LEDs 0-1) go green; sensors (LEDs 2-3) stay red
+                strip.setPixelColor(0, NEON_GREEN_R, NEON_GREEN_G, NEON_GREEN_B);
+                strip.setPixelColor(1, NEON_GREEN_R, NEON_GREEN_G, NEON_GREEN_B);
+                strip.setPixelColor(2, 0, 64, 0);
+                strip.setPixelColor(3, 0, 64, 0);
+                audio.play(CLIP_03_SAMPLES, CLIP_03_NUM_SAMPLES, CLIP_03_SAMPLE_RATE);
             }
         }
 

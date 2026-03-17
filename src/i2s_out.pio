@@ -1,0 +1,78 @@
+;
+; I2S audio output PIO program for RP2040
+;
+; Outputs 16-bit stereo I2S data.
+; Side-set pin 0 = BCLK
+; OUT pin = DIN (data)
+; SET pin (optional, configured separately) = LRCLK
+;
+; Data format: 32-bit words from FIFO, left-justified.
+;   Left channel sample in upper 16 bits, right channel in lower 16 bits.
+;   For mono playback, duplicate the sample in both halves.
+;
+
+.program i2s_out
+.side_set 2
+
+; Side-set bits: bit 1 = LRCLK, bit 0 = BCLK
+; We clock out 16 bits per channel, 32 bits total per frame.
+
+; Left channel (LRCLK = 0)
+                    ;                          side (LRCLK | BCLK)
+    set x, 14       side 0b00             ; x = 14 (loop 15 times for bits 1-15)
+    out pins, 1     side 0b01             ; clock out MSB of left channel (rising BCLK)
+left_loop:
+    out pins, 1     side 0b00             ; data on falling edge
+    jmp x-- left_loop  side 0b01          ; rising edge clocks it in
+
+; Right channel (LRCLK = 1)
+    set x, 14       side 0b10             ; x = 14, LRCLK goes high
+    out pins, 1     side 0b11             ; clock out MSB of right channel
+right_loop:
+    out pins, 1     side 0b10             ; data on falling edge
+    jmp x-- right_loop side 0b11          ; rising edge clocks it in
+
+% c-sdk {
+#include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+static inline void i2s_out_program_init(PIO pio, uint sm, uint offset,
+                                         uint data_pin, uint bclk_pin,
+                                         uint lrclk_pin, uint sample_rate) {
+    // Configure pins
+    pio_gpio_init(pio, data_pin);
+    pio_gpio_init(pio, bclk_pin);
+    pio_gpio_init(pio, lrclk_pin);
+
+    // Set pin directions to output
+    pio_sm_set_consecutive_pindirs(pio, sm, data_pin, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, bclk_pin, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, lrclk_pin, 1, true);
+
+    pio_sm_config c = i2s_out_program_get_default_config(offset);
+
+    // OUT pin = data_pin (DIN)
+    sm_config_set_out_pins(&c, data_pin, 1);
+
+    // Side-set pins: BCLK and LRCLK (2 pins, starting at bclk_pin)
+    // bclk_pin and lrclk_pin must be consecutive: bclk_pin, then lrclk_pin = bclk_pin+1
+    sm_config_set_sideset_pins(&c, bclk_pin);
+
+    // Shift out MSB first, autopull at 32 bits
+    sm_config_set_out_shift(&c, false, true, 32);
+
+    // Join FIFOs for TX
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    // Clock divider: each bit takes 2 PIO cycles (data + clock edge)
+    // Total cycles per frame = 32 bits * 2 cycles = 64 cycles
+    // But our PIO program uses 2 instructions per bit, so:
+    // PIO clock = sample_rate * 32 * 2
+    float pio_freq = (float)sample_rate * 32.0f * 2.0f;
+    float div = (float)clock_get_hz(clk_sys) / pio_freq;
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
